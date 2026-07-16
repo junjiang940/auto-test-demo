@@ -1,23 +1,37 @@
-name: Run API Test
-
+name: 语音转写接口自动化测试
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
+  schedule:
+    # 每日凌晨2点自动执行全量接口回归
+    - cron: '0 2 * * *'
 
 jobs:
-  test:
+  api_auto_test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install requests
-    - name: Run public API test
-      run: python test_public_api.py
+      - name: 拉取仓库代码
+        uses: actions/checkout@v4
+
+      - name: 配置Node18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: 安装Newman
+        run: npm install -g newman newman-reporter-html
+
+      - name: 执行全套接口用例
+        run: |
+          newman run api_collection.json \
+          -e test_env.json \
+          -r cli,html \
+          --reporter-html-export api_test_report.html
+
+      - name: 归档测试报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: 接口自动化测试报告
+          path: api_test_report.html
